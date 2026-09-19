@@ -1,4 +1,4 @@
-export type ScanStatus = 'QUEUED' | 'ANALYZING' | 'SECURITY_SCAN' | 'REPAIRING' | 'SANDBOX_EXECUTION' | 'JUDGING' | 'COMPLETED' | 'FAILED';
+export type ScanStatus = 'QUEUED' | 'ANALYZING' | 'REPAIRING' | 'SANDBOXING' | 'JUDGING' | 'COMPLETED' | 'FAILED' | 'VERIFIED';
 
 export type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
 

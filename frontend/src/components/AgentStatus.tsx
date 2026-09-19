@@ -64,11 +64,12 @@ export const AgentStatus: React.FC<AgentStatusProps> = ({ status }) => {
     const statusOrder: ScanStatus[] = [
       'QUEUED',
       'ANALYZING',
-      'SECURITY_SCAN',
+      'ANALYZING', // Security scan runs in parallel during ANALYZING
       'REPAIRING',
-      'SANDBOX_EXECUTION',
+      'SANDBOXING',
       'JUDGING',
-      'COMPLETED'
+      'COMPLETED',
+      'VERIFIED'
     ];
 
     const currentIndex = statusOrder.indexOf(status);

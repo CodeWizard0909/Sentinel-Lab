@@ -15,13 +15,27 @@ import {
   Sparkles,
   ChevronRight
 } from 'lucide-react';
+import { SentinelApiService } from '../services/api';
 
 export const ResultsPage: React.FC = () => {
   const { scanId = 'SL-1024' } = useParams<{ scanId: string }>();
   const [copiedPatch, setCopiedPatch] = useState(false);
+  const [scanData, setScanData] = useState<any>(null);
+
+  React.useEffect(() => {
+    SentinelApiService.getScanById(scanId).then(data => setScanData(data));
+  }, [scanId]);
+
+  const isVerified = scanData?.verdict?.is_verified ?? true;
+  const verdictStatus = scanData?.verdict?.verdict ?? 'VERIFIED';
+  const issuesFound = scanData?.issues?.length ?? 2;
+  const testsPassed = scanData?.repaired_sandbox?.tests_passed ?? 14;
+  const totalTests = (scanData?.repaired_sandbox?.tests_passed ?? 14) + (scanData?.repaired_sandbox?.tests_failed ?? 0);
+  const patchDiff = scanData?.repairs?.[0]?.diff || `// database.js:42 - SentinelLab Verified Patch\ndb.query("SELECT * FROM users WHERE id=?", [id])`;
+  const projectName = scanData?.project_name || 'student-portal.zip';
 
   const handleCopyPatch = () => {
-    navigator.clipboard.writeText(`// database.js:42 - SentinelLab Verified Patch\ndb.query("SELECT * FROM users WHERE id=?", [id])`);
+    navigator.clipboard.writeText(patchDiff);
     setCopiedPatch(true);
     setTimeout(() => setCopiedPatch(false), 2000);
   };
@@ -75,18 +89,18 @@ export const ResultsPage: React.FC = () => {
 
         {/* Large Verdict */}
         <h1 className="text-5xl sm:text-7xl font-serif font-light text-white tracking-tight flex items-center justify-center gap-3 mb-4">
-          <span className="text-emerald-400">✓</span>
-          <span>VERIFIED</span>
+          <span className={isVerified ? "text-emerald-400" : "text-red-400"}>{isVerified ? '✓' : '×'}</span>
+          <span>{verdictStatus}</span>
         </h1>
 
         {/* Subtitle */}
         <p className="max-w-xl text-base sm:text-lg text-zinc-400 font-normal leading-relaxed">
-          Generated repair passed security and regression testing inside the sandbox.
+          {scanData?.verdict?.summary || 'Generated repair passed security and regression testing inside the sandbox.'}
         </p>
 
         {/* Metadata tag */}
         <div className="mt-6 inline-flex items-center gap-3 text-xs font-mono text-zinc-500">
-          <span>Project: student-portal.zip</span>
+          <span>Project: {projectName}</span>
           <span>•</span>
           <span>Runtime: AWS Bedrock AgentCore</span>
           <span>•</span>
@@ -102,10 +116,10 @@ export const ResultsPage: React.FC = () => {
           <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
             VULNERABILITIES
           </span>
-          <div className="text-3xl font-serif text-white">2</div>
+          <div className="text-3xl font-serif text-white">{issuesFound}</div>
           <div className="text-[11px] text-zinc-400 mt-2 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-            <span>CWE-89 & Plaintext</span>
+            <span className="truncate">{scanData?.issues?.[0]?.severity || 'CWE-89 & Plaintext'}</span>
           </div>
         </div>
 
@@ -114,7 +128,7 @@ export const ResultsPage: React.FC = () => {
           <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
             ISSUES FIXED
           </span>
-          <div className="text-3xl font-serif text-emerald-400">2</div>
+          <div className="text-3xl font-serif text-emerald-400">{scanData?.repairs?.length || issuesFound}</div>
           <div className="text-[11px] text-zinc-400 mt-2 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             <span>100% Remediated</span>
@@ -127,7 +141,7 @@ export const ResultsPage: React.FC = () => {
             TESTS PASSED
           </span>
           <div className="text-3xl font-serif text-white">
-            14 <span className="text-base text-zinc-500 font-sans">/ 14</span>
+            {testsPassed} <span className="text-base text-zinc-500 font-sans">/ {totalTests}</span>
           </div>
           <div className="text-[11px] text-zinc-400 mt-2 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -140,7 +154,7 @@ export const ResultsPage: React.FC = () => {
           <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
             SANDBOX
           </span>
-          <div className="text-3xl font-serif text-sky-400">VERIFIED</div>
+          <div className="text-3xl font-serif text-sky-400">{scanData?.repaired_sandbox?.status || 'VERIFIED'}</div>
           <div className="text-[11px] text-zinc-400 mt-2 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
             <span>AgentCore Isolated</span>

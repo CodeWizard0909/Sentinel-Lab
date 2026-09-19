@@ -88,7 +88,7 @@ export class SentinelApiService {
         });
         if (res.ok) {
           const data = await res.json();
-          return data;
+          return { scan_id: data.scanId || data.scan_id, status: data.status };
         }
       } catch (err) {
         console.warn('Using local orchestrator simulator', err);

@@ -6,6 +6,7 @@ import {
   ArrowRight, 
   Loader2
 } from 'lucide-react';
+import { SentinelApiService } from '../services/api';
 
 interface AgentStep {
   name: string;
@@ -88,43 +89,53 @@ export const ScanDashboardPage: React.FC = () => {
   }, [terminalLogs.length]);
 
   useEffect(() => {
-    const t1 = setTimeout(() => {
-      setPipelineSteps((prev) => [
-        { ...prev[0], status: 'done' },
-        { ...prev[1], status: 'done' },
-        { ...prev[2], status: 'done', timing: '1.8s', activity: 'Unified patch synthesized.' },
-        { ...prev[3], status: 'active', timing: 'Running', activity: 'Executing baseline vs patched exploit harness.' },
-        { ...prev[4], status: 'pending' },
-      ]);
-    }, 4000);
+    let isSubscribed = true;
 
-    const t2 = setTimeout(() => {
-      setPipelineSteps((prev) => [
-        { ...prev[0], status: 'done' },
-        { ...prev[1], status: 'done' },
-        { ...prev[2], status: 'done' },
-        { ...prev[3], status: 'done', timing: '2.1s', activity: 'Exploit blocked. 14/14 tests passed.' },
-        { ...prev[4], status: 'active', timing: 'Evaluating', activity: 'Verifying zero functional regressions.' },
-      ]);
-    }, 7000);
-
-    const t3 = setTimeout(() => {
-      setPipelineSteps((prev) => [
-        { ...prev[0], status: 'done' },
-        { ...prev[1], status: 'done' },
-        { ...prev[2], status: 'done' },
-        { ...prev[3], status: 'done' },
-        { ...prev[4], status: 'done', timing: '0.4s', activity: 'Certified fix with 99.4% confidence.' },
-      ]);
-      setIsDone(true);
-    }, 9000);
+    SentinelApiService.simulateScanProgress(scanId, (data) => {
+      if (!isSubscribed) return;
+      
+      const s = data.status;
+      setPipelineSteps((prev) => {
+        const next = prev.map(p => ({...p})); // clone
+        
+        if (s === 'ANALYZING') {
+          next[0].status = 'active';
+          next[1].status = 'active';
+        } else if (s === 'REPAIRING' || s === 'SANDBOXING' || s === 'JUDGING' || s === 'COMPLETED' || s === 'VERIFIED' || s === 'FAILED') {
+          next[0].status = 'done';
+          next[1].status = 'done';
+          
+          if (s === 'REPAIRING') {
+            next[2].status = 'active';
+          } else {
+            next[2].status = 'done';
+            
+            if (s === 'SANDBOXING') {
+              next[3].status = 'active';
+            } else {
+              next[3].status = 'done';
+              
+              if (s === 'JUDGING') {
+                next[4].status = 'active';
+              } else {
+                next[4].status = 'done';
+              }
+            }
+          }
+        }
+        return next;
+      });
+    }).then(() => {
+      if (isSubscribed) {
+        setPipelineSteps((prev) => prev.map(step => ({ ...step, status: 'done' })));
+        setIsDone(true);
+      }
+    });
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+      isSubscribed = false;
     };
-  }, []);
+  }, [scanId]);
 
   return (
     <div className="relative z-10 min-h-screen px-4 sm:px-6 pt-28 pb-20 max-w-6xl mx-auto flex flex-col text-white">
