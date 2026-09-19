@@ -67,8 +67,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: sentinellab-worker
-      Handler: handler.handler
-      CodeUri: ../worker/
+      Handler: app.worker_handler.handler
+      CodeUri: ../backend/
       Timeout: 900
       MemorySize: 1024
       Policies:
