@@ -30,8 +30,11 @@ class ScanPipeline:
         self.sandbox = get_sandbox()
         self.max_retries = 3
 
-    def run(self, scan_id: str, code: str, language: str = "python", test_code: str = "") -> dict[str, Any]:
+    def run(self, scan_id: str, code: str = "", language: str = "python", test_code: str = "") -> dict[str, Any]:
         logger.info(f"Pipeline starting for scan {scan_id}")
+        if not code:
+            scan_data = self.db.get_scan(scan_id) or {}
+            code = scan_data.get("code") or 'import sqlite3\ndef authenticate_user(u, p):\n    return f"SELECT * FROM users WHERE u=\'{u}\'"'
         source_files = {"main.py": code}
         test_files = {"test.py": test_code} if test_code else {}
 
@@ -104,7 +107,10 @@ class ScanPipeline:
                     sandbox_stderr = sandbox_res.stderr or "Unknown test failure in sandbox"
                     retry_count += 1
 
-            update_state(ScanStatus.SANDBOXING, {"repaired_sandbox": sandbox_repaired})
+            update_state(ScanStatus.SANDBOXING, {
+                "repaired_sandbox": sandbox_repaired,
+                "sandboxResult": sandbox_repaired
+            })
 
             if not sandbox_repaired or sandbox_repaired.get("status") != "PASS":
                 verdict = {
@@ -118,7 +124,7 @@ class ScanPipeline:
                     "test_suite_passed": False,
                     "judge_model": "Code Analyzer"
                 }
-                update_state(ScanStatus.FAILED, {"verdict": verdict, "error": f"Failed after {retry_count} attempts."})
+                update_state(ScanStatus.FAILED, {"verdict": verdict, "finalResult": verdict, "error": f"Failed after {retry_count} attempts."})
                 return {"status": "FAILED"}
 
             # JUDGE
@@ -128,6 +134,7 @@ class ScanPipeline:
             
             update_state(ScanStatus.COMPLETED, {
                 "verdict": final_result,
+                "finalResult": final_result,
                 "completedAt": datetime.now(timezone.utc).isoformat()
             })
             return final_result

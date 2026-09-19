@@ -17,7 +17,7 @@ class ScanStatus(str, Enum):
 
 
 class ScanCreate(BaseModel):
-    """Request body for creating a new scan (Frontend sends this)."""
+    """Request body for creating a new scan."""
     model_config = ConfigDict(populate_by_name=True)
 
     project_name: str = Field(..., min_length=1, max_length=100, alias="projectName")
@@ -33,26 +33,22 @@ class ScanResponse(BaseModel):
 
     scan_id: str = Field(..., alias="scanId")
     project_name: str = Field(..., alias="projectName")
+    upload_url: str = Field("", alias="uploadUrl")
     status: ScanStatus = ScanStatus.QUEUED
 
 
 class ScanDetail(BaseModel):
-    """Full scan detail for GET /scans/{scanId} — Matches Frontend UI State."""
+    """Full scan detail for GET /scans/{scanId}."""
     model_config = ConfigDict(populate_by_name=True)
 
-    scan_id: str = Field(..., alias="scan_id")
-    project_name: str = Field(..., alias="project_name")
+    scan_id: str = Field(..., alias="scanId")
+    project_name: str = Field(..., alias="projectName")
     status: ScanStatus
-    created_at: str = Field("", alias="created_at")
-    completed_at: Optional[str] = Field(None, alias="completed_at")
+    created_at: str = Field("", alias="createdAt")
+    completed_at: Optional[str] = Field(None, alias="completedAt")
     issues: list = Field(default_factory=list)
     repairs: list = Field(default_factory=list)
-    
-    # Custom payload mapping to frontend's sandbox objects
-    baseline_sandbox: Optional[dict] = None
-    repaired_sandbox: Optional[dict] = None
-    
-    # Custom payload mapping to frontend's verdict object
+    baseline_sandbox: Optional[dict] = Field(None, alias="baseline_sandbox")
+    repaired_sandbox: Optional[dict] = Field(None, alias="repaired_sandbox")
     verdict: Optional[dict] = None
-    
     error: Optional[str] = None

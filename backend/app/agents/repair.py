@@ -46,7 +46,30 @@ class RepairAgent(BaseAgent):
         self._log(f"Generating repair for issue {issue.get('id')}")
 
         if self.model_client.mock_mode:
-            return {"repairs": [], "fixedFiles": []}
+            fixed = {}
+            for name, content in source_files.items():
+                fixed_content = content.replace('f"SELECT', '"SELECT').replace("f'SELECT", "'SELECT")
+                fixed[name] = fixed_content
+            return {
+                "repairs": [
+                    {
+                        "id": "rep_1",
+                        "issue_id": issue.get("id", "sec_1"),
+                        "file_path": list(source_files.keys())[0] if source_files else "main.py",
+                        "original_code": list(source_files.values())[0] if source_files else "",
+                        "repaired_code": list(fixed.values())[0] if fixed else "",
+                        "diff": "- query = f\"SELECT * FROM ...\"\n+ query = \"SELECT * FROM ...\"",
+                        "explanation": "Replaced insecure formatted query with parameterized query."
+                    }
+                ],
+                "fixedFiles": [
+                    {
+                        "file": name,
+                        "fixedContent": content
+                    }
+                    for name, content in fixed.items()
+                ]
+            }
 
         files_text = "\n".join(f"--- {name} ---\n```{language}\n{content}\n```" for name, content in source_files.items())
         issue_text = json.dumps(issue, indent=2)

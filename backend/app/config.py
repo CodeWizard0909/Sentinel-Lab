@@ -17,10 +17,12 @@ class Settings(BaseSettings):
     )
 
     # --- Mode ---
-    mock_mode: bool = True
+    mock_mode: bool = False
 
     # --- AWS ---
     aws_region: str = "us-east-1"
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
 
     # --- S3 ---
     s3_bucket_name: str = "sentinellab-projects"
@@ -29,10 +31,10 @@ class Settings(BaseSettings):
     dynamodb_table_name: str = "SentinelLabScans"
 
     # --- Bedrock Model IDs ---
-    analyzer_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
-    security_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
-    repair_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
-    judge_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
+    analyzer_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    security_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    repair_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+    judge_model_id: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
 
     # --- AgentCore ---
     agentcore_sandbox_id: str = ""

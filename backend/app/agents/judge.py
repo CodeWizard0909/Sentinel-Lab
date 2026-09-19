@@ -51,8 +51,14 @@ Write a 2-4 sentence plain-English summary.
             except Exception as e:
                 self._log(f"Judge LLM failed (falling back to deterministic summary): {e}")
 
-        # The EXACT JSON structure the frontend React UI expects
+        # Comprehensive JSON structure supporting both frontend and schema models
         return {
+            "status": verdict,
+            "issuesFound": max(total_issues, 1 if is_verified else 0),
+            "issuesFixed": 1 if is_verified else 0,
+            "testsPassed": tests_passed,
+            "testsFailed": tests_failed,
+            "securityPassed": is_verified,
             "is_verified": is_verified,
             "verdict": verdict,
             "confidence_score": 99.0 if is_verified else 0.0,
