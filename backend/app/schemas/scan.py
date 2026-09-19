@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import Optional, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ScanStatus(str, Enum):
@@ -18,29 +18,28 @@ class ScanStatus(str, Enum):
 
 class ScanCreate(BaseModel):
     """Request body for creating a new scan (Frontend sends this)."""
-    project_name: str = Field(..., alias="projectName")
+    model_config = ConfigDict(populate_by_name=True)
+
+    project_name: str = Field(..., min_length=1, max_length=100, alias="projectName")
     code: str = ""
     language: str = "python"
     test_code: str = Field("", alias="testCode")
     model: Optional[str] = None
 
-    class Config:
-        populate_by_name = True
-
 
 class ScanResponse(BaseModel):
     """Response after creating a scan."""
+    model_config = ConfigDict(populate_by_name=True)
+
     scan_id: str = Field(..., alias="scanId")
     project_name: str = Field(..., alias="projectName")
     status: ScanStatus = ScanStatus.QUEUED
 
-    class Config:
-        populate_by_name = True
-        by_alias = True
-
 
 class ScanDetail(BaseModel):
     """Full scan detail for GET /scans/{scanId} — Matches Frontend UI State."""
+    model_config = ConfigDict(populate_by_name=True)
+
     scan_id: str = Field(..., alias="scan_id")
     project_name: str = Field(..., alias="project_name")
     status: ScanStatus
@@ -57,7 +56,3 @@ class ScanDetail(BaseModel):
     verdict: Optional[dict] = None
     
     error: Optional[str] = None
-
-    class Config:
-        populate_by_name = True
-        by_alias = True

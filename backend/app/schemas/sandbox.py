@@ -1,7 +1,7 @@
 """Sandbox schemas — request and result models."""
 
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class SandboxStatus(str, Enum):
@@ -14,18 +14,18 @@ class SandboxStatus(str, Enum):
 
 class SandboxRequest(BaseModel):
     """Input to the sandbox executor."""
-    code: dict[str, str] = Field(default_factory=dict)  # filename -> content
-    language: str = "python"
-    tests: dict[str, str] = Field(default_factory=dict)  # filename -> content
-    security_tests: dict[str, str] = Field(default_factory=dict, alias="securityTests")
+    model_config = ConfigDict(populate_by_name=True)
 
-    class Config:
-        populate_by_name = True
-        by_alias = True
+    code: dict[str, str] = Field(default_factory=dict)
+    language: str = "python"
+    tests: dict[str, str] = Field(default_factory=dict)
+    security_tests: dict[str, str] = Field(default_factory=dict, alias="securityTests")
 
 
 class SandboxResult(BaseModel):
     """Output of sandbox execution."""
+    model_config = ConfigDict(populate_by_name=True)
+
     status: SandboxStatus
     stdout: str = ""
     stderr: str = ""
@@ -33,7 +33,3 @@ class SandboxResult(BaseModel):
     tests_failed: int = Field(0, alias="testsFailed")
     security_passed: bool = Field(True, alias="securityPassed")
     execution_time_ms: int = Field(0, alias="executionTimeMs")
-
-    class Config:
-        populate_by_name = True
-        by_alias = True
