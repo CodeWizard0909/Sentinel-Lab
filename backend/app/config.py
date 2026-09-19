@@ -1,0 +1,49 @@
+"""SentinelLab backend configuration.
+
+All settings loaded from environment variables with sensible defaults.
+"""
+
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+
+class Settings(BaseSettings):
+    """Application settings from environment variables."""
+
+    # --- Mode ---
+    mock_mode: bool = True
+
+    # --- AWS ---
+    aws_region: str = "us-east-1"
+
+    # --- S3 ---
+    s3_bucket_name: str = "sentinellab-projects"
+
+    # --- DynamoDB ---
+    dynamodb_table_name: str = "SentinelLabScans"
+
+    # --- Bedrock Model IDs ---
+    analyzer_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
+    security_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
+    repair_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
+    judge_model_id: str = "anthropic.claude-3-sonnet-20240229-v1:0"
+
+    # --- AgentCore ---
+    agentcore_sandbox_id: str = ""
+
+    # --- Worker Lambda ---
+    worker_lambda_name: str = "sentinellab-worker"
+
+    # --- API ---
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Cached settings instance."""
+    return Settings()

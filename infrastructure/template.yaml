@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SentinelLab — Multi-Agent AI Software Verification Platform
+
+Globals:
+  Function:
+    Timeout: 300
+    Runtime: python3.11
+    MemorySize: 512
+    Environment:
+      Variables:
+        MOCK_MODE: 'false'
+        S3_BUCKET_NAME: !Ref ProjectsBucket
+        DYNAMODB_TABLE_NAME: !Ref ScansTable
+        ANALYZER_MODEL_ID: 'anthropic.claude-3-sonnet-20240229-v1:0'
+        SECURITY_MODEL_ID: 'anthropic.claude-3-sonnet-20240229-v1:0'
+        REPAIR_MODEL_ID: 'anthropic.claude-3-sonnet-20240229-v1:0'
+        JUDGE_MODEL_ID: 'anthropic.claude-3-sonnet-20240229-v1:0'
+
+Resources:
+  # --- API Gateway ---
+  SentinelLabApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: prod
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+
+  # --- API Lambda ---
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: sentinellab-api
+      Handler: app.main.handler
+      CodeUri: ../backend/
+      Events:
+        CatchAll:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SentinelLabApi
+            Path: /{proxy+}
+            Method: ANY
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ScansTable
+        - S3CrudPolicy:
+            BucketName: !Ref ProjectsBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: !GetAtt WorkerFunction.Arn
+      Environment:
+        Variables:
+          WORKER_LAMBDA_NAME: !Ref WorkerFunction
+
+  # --- Worker Lambda ---
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: sentinellab-worker
+      Handler: handler.handler
+      CodeUri: ../worker/
+      Timeout: 900
+      MemorySize: 1024
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ScansTable
+        - S3CrudPolicy:
+            BucketName: !Ref ProjectsBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+
+  # --- S3 Bucket ---
+  ProjectsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'sentinellab-projects-${AWS::AccountId}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # --- DynamoDB Table ---
+  ScansTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: SentinelLabScans
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: scanId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: scanId
+          KeyType: HASH
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway URL
+    Value: !Sub 'https://${SentinelLabApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+  ProjectsBucketName:
+    Description: S3 bucket for project uploads
+    Value: !Ref ProjectsBucket
+  ScansTableName:
+    Description: DynamoDB table for scan records
+    Value: !Ref ScansTable
