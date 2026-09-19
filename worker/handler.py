@@ -23,11 +23,18 @@ def handler(event, context):
     """
     logger.info(f"Worker invoked with event: {json.dumps(event)}")
 
-    # Extract scanId from event
+    # Extract payload
     scan_id = event.get("scanId")
+    code = event.get("code", "")
+    language = event.get("language", "python")
+    test_code = event.get("test_code", "")
+
     if not scan_id and "body" in event:
         body = json.loads(event["body"])
         scan_id = body.get("scanId")
+        code = body.get("code", "")
+        language = body.get("language", "python")
+        test_code = body.get("test_code", "")
 
     if not scan_id:
         logger.error("No scanId in event")
@@ -40,7 +47,7 @@ def handler(event, context):
         from app.orchestrator.pipeline import ScanPipeline
 
         pipeline = ScanPipeline()
-        result = pipeline.run(scan_id)
+        result = pipeline.run(scan_id, code, language, test_code)
 
         return {
             "statusCode": 200,

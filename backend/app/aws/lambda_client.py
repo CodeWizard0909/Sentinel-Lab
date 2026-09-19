@@ -27,9 +27,14 @@ class LambdaClient:
         else:
             self.client = None
 
-    def invoke_worker(self, scan_id: str) -> None:
+    def invoke_worker(self, scan_id: str, code: str, language: str, test_code: str) -> None:
         """Invoke the worker Lambda asynchronously."""
-        payload = {"scanId": scan_id}
+        payload = {
+            "scanId": scan_id,
+            "code": code,
+            "language": language,
+            "test_code": test_code
+        }
 
         if self.mock_mode:
             logger.info(f"[MOCK] Lambda invoke: {self.function_name} with {payload}")

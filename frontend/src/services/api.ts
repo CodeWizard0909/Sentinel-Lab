@@ -4,7 +4,7 @@ import { MOCK_SCANS_RECORD, SAMPLE_PROJECTS } from '../mock/mockData';
 const API_BASE_URL = '/api';
 
 export class SentinelApiService {
-  private static isMockMode: boolean = true;
+  private static isMockMode: boolean = false;
 
   static setMockMode(enabled: boolean) {
     this.isMockMode = enabled;
@@ -98,125 +98,48 @@ export class SentinelApiService {
     return { scan_id: scanId, status: 'QUEUED' };
   }
 
-  // Simulated live step progression for demonstrative UX
+  // Poll the real backend API or use mock data
   static async simulateScanProgress(
     scanId: string, 
     onProgress: (status: ScanResult) => void
   ): Promise<ScanResult> {
-    const current = MOCK_SCANS_RECORD[scanId] || {
-      scan_id: scanId,
-      project_name: 'Code Verification Task',
-      status: 'QUEUED',
-      created_at: new Date().toISOString(),
-      issues: [],
-      repairs: []
-    };
+    if (this.isMockMode) {
+      // Return a quick mock resolution
+      const current = MOCK_SCANS_RECORD[scanId] || { scan_id: scanId, status: 'COMPLETED' as any };
+      current.status = 'COMPLETED';
+      onProgress({ ...current });
+      return current;
+    }
 
+    // Live polling logic
     const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+    
+    let isComplete = false;
+    let finalResult: ScanResult | null = null;
+    let retries = 0;
 
-    // 1. Static Analysis
-    current.status = 'ANALYZING';
-    onProgress({ ...current });
-    await sleep(1000);
-
-    // 2. Security Vulnerability Scanning
-    current.status = 'SECURITY_SCAN';
-    current.issues = [
-      {
-        id: `iss-${Math.random().toString(36).substring(2, 6)}`,
-        category: 'SECURITY',
-        severity: 'CRITICAL',
-        title: 'Vulnerability Detected in Execution Path',
-        description: 'Analysis Agent flagged dangerous unsafe boundary evaluation and unsanitized parameters.',
-        file_path: 'main.py',
-        line_start: 6,
-        line_end: 11,
-        cwe_id: 'CWE-89 / CWE-20',
-        recommendation: 'Refactor using verified immutable bindings and bounded condition check.'
+    while (!isComplete && retries < 120) { // Max 2 minutes
+      try {
+        const res = await fetch(`${API_BASE_URL}/scans/${scanId}`);
+        if (res.ok) {
+          const data = await res.json();
+          onProgress(data);
+          
+          if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+            isComplete = true;
+            finalResult = data;
+          }
+        }
+      } catch (err) {
+        console.warn('Polling error', err);
       }
-    ];
-    onProgress({ ...current });
-    await sleep(1200);
-
-    // 3. AI Repair Generation
-    current.status = 'REPAIRING';
-    current.repairs = [
-      {
-        id: `rep-${Math.random().toString(36).substring(2, 6)}`,
-        issue_id: current.issues[0]?.id || 'iss-01',
-        file_path: 'main.py',
-        original_code: `# Original vulnerability\nquery = f"SELECT * FROM accounts WHERE id = '{user_input}'"`,
-        repaired_code: `# AI Verified Repair\nquery = "SELECT * FROM accounts WHERE id = ?"\ncursor.execute(query, (user_input,))`,
-        diff: `- query = f"SELECT * FROM accounts WHERE id = '{user_input}'"\n+ query = "SELECT * FROM accounts WHERE id = ?"\n+ cursor.execute(query, (user_input,))`,
-        explanation: 'Replaced dynamic concatenation with parameterized execution.',
-        model_used: 'anthropic.claude-3-5-sonnet-20241022-v2:0'
+      
+      if (!isComplete) {
+        await sleep(1000);
+        retries++;
       }
-    ];
-    onProgress({ ...current });
-    await sleep(1200);
+    }
 
-    // 4. Isolated AWS Sandbox Execution
-    current.status = 'SANDBOX_EXECUTION';
-    current.baseline_sandbox = {
-      scan_id: scanId,
-      target_stage: 'BASELINE_ORIGINAL',
-      execution_id: `sb-orig-${Math.random().toString(36).substring(2, 5)}`,
-      status: 'FAILED',
-      exit_code: 1,
-      stdout: '[AWS AgentCore Sandbox] Executing baseline unpatched source code...\n[AssertionError] Security flaw confirmed by exploit test.',
-      stderr: 'Test failed: Exploit injected successfully',
-      duration_ms: 1120,
-      memory_used_mb: 38.4,
-      tests_passed: 0,
-      tests_failed: 1,
-      sandbox_provider: 'BEDROCK_AGENTCORE'
-    };
-    current.repaired_sandbox = {
-      scan_id: scanId,
-      target_stage: 'POST_REPAIR',
-      execution_id: `sb-rep-${Math.random().toString(36).substring(2, 5)}`,
-      status: 'PASSED',
-      exit_code: 0,
-      stdout: '[AWS AgentCore Sandbox] Executing patched source code in isolated environment...\n[PASS] All 5 regression and security tests PASSED with zero leaks.',
-      stderr: '',
-      duration_ms: 860,
-      memory_used_mb: 37.9,
-      tests_passed: 5,
-      tests_failed: 0,
-      sandbox_provider: 'BEDROCK_AGENTCORE'
-    };
-    onProgress({ ...current });
-    await sleep(1400);
-
-    // 5. Judge Agent Verdict
-    current.status = 'JUDGING';
-    onProgress({ ...current });
-    await sleep(1000);
-
-    // 6. Completed
-    current.status = 'COMPLETED';
-    current.completed_at = new Date().toISOString();
-    current.duration_seconds = 4.8;
-    current.verdict = {
-      is_verified: true,
-      verdict: 'VERIFIED',
-      confidence_score: 99.2,
-      summary: 'Autonomous verification confirmed by Bedrock Judge Agent. All sandbox tests succeeded in isolated environment.',
-      reasoning: [
-        'Isolated AWS Bedrock AgentCore sandbox execution produced zero failures or leaks.',
-        'Exploit vector was fully neutralized.',
-        'No behavioral regressions identified.',
-        'Verified patch is ready for automated PR generation.'
-      ],
-      regression_detected: false,
-      security_mitigated: true,
-      test_suite_passed: true,
-      judge_model: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
-      timestamp: new Date().toISOString()
-    };
-
-    MOCK_SCANS_RECORD[scanId] = current;
-    onProgress({ ...current });
-    return current;
+    return finalResult || { scan_id: scanId, status: 'FAILED', project_name: 'Unknown' } as ScanResult;
   }
 }
