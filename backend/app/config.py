@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
 
     # --- Mode ---
-    mock_mode: bool = False
+    mock_mode: bool = True
 
     # --- AWS ---
     aws_region: str = "us-east-1"

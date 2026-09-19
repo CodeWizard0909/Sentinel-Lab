@@ -30,7 +30,7 @@ async def health_check():
     return {
         "status": "ok",
         "mode": "mock" if settings.mock_mode else "live",
-        "aws_connected": aws_connected or (not settings.mock_mode),
+        "aws_connected": aws_connected,
         "region": settings.aws_region,
         "dynamodb_table": settings.dynamodb_table_name,
         "s3_bucket": settings.s3_bucket_name,

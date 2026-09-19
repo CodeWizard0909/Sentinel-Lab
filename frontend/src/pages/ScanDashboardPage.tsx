@@ -169,14 +169,14 @@ export const ScanDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Five-Agent Pipeline */}
+      {/* Four-Agent Pipeline */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-3 px-1">
           <span className="text-xs font-mono text-[#a2a9b8] uppercase tracking-wider">
-            FIVE-AGENT VERIFICATION PIPELINE
+            FOUR-AGENT VERIFICATION PIPELINE
           </span>
           <span className="text-[11px] font-mono text-zinc-500">
-            {isDone ? 'All 5 agents completed' : 'Autonomous execution sequence'}
+            {isDone ? 'Verification sequence completed' : 'Autonomous execution sequence'}
           </span>
         </div>
 
