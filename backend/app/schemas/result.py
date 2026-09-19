@@ -1,7 +1,7 @@
 """Result schemas — Judge verdict and final result."""
 
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class JudgeVerdict(str, Enum):
@@ -13,6 +13,8 @@ class JudgeVerdict(str, Enum):
 
 class FinalResult(BaseModel):
     """Output of the Judge Agent — final verification."""
+    model_config = ConfigDict(populate_by_name=True)
+
     status: JudgeVerdict
     reason: str = ""
     issues_found: int = Field(0, alias="issuesFound")
@@ -20,7 +22,3 @@ class FinalResult(BaseModel):
     tests_passed: int = Field(0, alias="testsPassed")
     tests_failed: int = Field(0, alias="testsFailed")
     security_passed: bool = Field(True, alias="securityPassed")
-
-    class Config:
-        populate_by_name = True
-        by_alias = True

@@ -1,19 +1,16 @@
 """Repair schemas — fixed files, diff, explanation."""
 
-from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class FixedFile(BaseModel):
     """A file modified by the repair agent."""
+    model_config = ConfigDict(populate_by_name=True)
+
     file: str
     original_content: str = Field("", alias="originalContent")
     fixed_content: str = Field("", alias="fixedContent")
     diff: str = ""
-
-    class Config:
-        populate_by_name = True
-        by_alias = True
 
 
 class GeneratedTest(BaseModel):
@@ -25,11 +22,9 @@ class GeneratedTest(BaseModel):
 
 class RepairResult(BaseModel):
     """Output of the Repair Agent."""
+    model_config = ConfigDict(populate_by_name=True)
+
     fixed_files: list[FixedFile] = Field(default_factory=list, alias="fixedFiles")
     diff: str = ""
     explanation: str = ""
     tests: list[GeneratedTest] = Field(default_factory=list)
-
-    class Config:
-        populate_by_name = True
-        by_alias = True
