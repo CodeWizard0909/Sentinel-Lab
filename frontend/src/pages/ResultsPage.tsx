@@ -32,7 +32,7 @@ export const ResultsPage: React.FC = () => {
   const testsPassed = scanData?.repaired_sandbox?.tests_passed ?? 14;
   const totalTests = (scanData?.repaired_sandbox?.tests_passed ?? 14) + (scanData?.repaired_sandbox?.tests_failed ?? 0);
   const patchDiff = scanData?.repairs?.[0]?.diff || `// database.js:42 - SentinelLab Verified Patch\ndb.query("SELECT * FROM users WHERE id=?", [id])`;
-  const projectName = scanData?.project_name || 'student-portal.zip';
+  const projectName = scanData?.project_name || 'Uploaded Project';
 
   const handleCopyPatch = () => {
     navigator.clipboard.writeText(patchDiff);

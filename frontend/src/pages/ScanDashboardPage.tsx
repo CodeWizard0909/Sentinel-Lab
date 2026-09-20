@@ -154,7 +154,7 @@ export const ScanDashboardPage: React.FC = () => {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-serif text-white flex items-center gap-3 font-light">
-            <span>student-portal.zip</span>
+            <span>{scanId.replace('scan-', '').substring(0, 8) || 'Project'} Verification</span>
             <span className="text-xs font-mono text-[#a2a9b8] font-normal px-2.5 py-1 rounded-md bg-white/5 border border-white/10">
               AWS Bedrock Orchestrated
             </span>

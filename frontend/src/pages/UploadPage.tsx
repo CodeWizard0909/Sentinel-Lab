@@ -65,7 +65,7 @@ export const UploadPage: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [selectedProject, setSelectedProject] = useState<DemoProject>(DEMO_PROJECTS[0]);
+  const [selectedProject, setSelectedProject] = useState<DemoProject | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
 
@@ -115,6 +115,7 @@ export const UploadPage: React.FC = () => {
   };
 
   const handleStartAnalysis = async () => {
+    if (!selectedProject) return;
     setIsAnalyzing(true);
     const result = await SentinelApiService.initiateScan({
       projectName: selectedProject.filename,
@@ -197,8 +198,8 @@ export const UploadPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Ready State */}
-            {selectedProject && (
+            {/* Ready State — only shown after user picks or uploads a project */}
+            {selectedProject !== null && (
               <div className="mt-6 pt-6 border-t border-white/10 neural-card p-5 border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
@@ -222,7 +223,7 @@ export const UploadPage: React.FC = () => {
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => { setSelectedProject(null); fileInputRef.current?.click(); }}
                     className="px-3.5 py-2 neural-pill text-xs text-[#a2a9b8] hover:text-white"
                   >
                     Change Project
@@ -254,7 +255,7 @@ export const UploadPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {DEMO_PROJECTS.map((demo) => {
-                const isSelected = selectedProject.id === demo.id;
+                const isSelected = selectedProject?.id === demo.id;
                 return (
                   <div
                     key={demo.id}
