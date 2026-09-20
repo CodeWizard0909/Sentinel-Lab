@@ -78,38 +78,80 @@ export const UploadPage: React.FC = () => {
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
+      let fileText = '// Uploaded project archive';
+      try {
+        fileText = await file.text();
+      } catch (err) {
+        // binary or zip
+      }
+
+      const lower = fileText.toLowerCase();
+      let vulnType = 'Custom Source Code';
+      let severity: 'HIGH' | 'MEDIUM' | 'LOW' = 'HIGH';
+
+      if (lower.includes('select') || lower.includes('sqlite3') || file.name.includes('auth')) {
+        vulnType = 'SQL Injection (CWE-89)';
+      } else if (lower.includes('innerhtml') || lower.includes('<script>')) {
+        vulnType = 'Stored XSS (CWE-79)';
+      } else if (lower.includes('os.system') || lower.includes('subprocess')) {
+        vulnType = 'Command Injection (CWE-78)';
+      } else if (lower.includes('rate') || lower.includes('slidingwindow')) {
+        vulnType = 'Off-by-One Flaw (CWE-193)';
+      }
+
       setSelectedProject({
         id: 'custom-file',
         name: file.name.split('.')[0] || 'Custom Project',
         filename: file.name,
-        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        fileCount: 14,
-        vulnType: 'Custom Source Code',
-        severity: 'HIGH',
-        description: 'Uploaded source bundle ready for automated Bedrock AST parsing.',
-        code: '// Uploaded project archive'
+        size: `${Math.max(0.1, file.size / (1024 * 1024)).toFixed(1)} MB`,
+        fileCount: file.name.endsWith('.zip') ? 14 : 1,
+        vulnType,
+        severity,
+        description: `Uploaded source file ready for automated Bedrock AST parsing and AgentCore sandbox testing.`,
+        code: fileText
       });
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      let fileText = '// Uploaded project archive';
+      try {
+        fileText = await file.text();
+      } catch (err) {
+        // binary or zip
+      }
+
+      const lower = fileText.toLowerCase();
+      let vulnType = 'Custom Source Code';
+      let severity: 'HIGH' | 'MEDIUM' | 'LOW' = 'HIGH';
+
+      if (lower.includes('select') || lower.includes('sqlite3') || file.name.includes('auth')) {
+        vulnType = 'SQL Injection (CWE-89)';
+      } else if (lower.includes('innerhtml') || lower.includes('<script>')) {
+        vulnType = 'Stored XSS (CWE-79)';
+      } else if (lower.includes('os.system') || lower.includes('subprocess')) {
+        vulnType = 'Command Injection (CWE-78)';
+      } else if (lower.includes('rate') || lower.includes('slidingwindow')) {
+        vulnType = 'Off-by-One Flaw (CWE-193)';
+      }
+
       setSelectedProject({
         id: 'custom-file',
         name: file.name.split('.')[0] || 'Custom Project',
         filename: file.name,
-        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        fileCount: 14,
-        vulnType: 'Custom Source Code',
-        severity: 'HIGH',
-        description: 'Uploaded source bundle ready for automated Bedrock AST parsing.',
-        code: '// Uploaded project archive'
+        size: `${Math.max(0.1, file.size / (1024 * 1024)).toFixed(1)} MB`,
+        fileCount: file.name.endsWith('.zip') ? 14 : 1,
+        vulnType,
+        severity,
+        description: `Uploaded source file ready for automated Bedrock AST parsing and AgentCore sandbox testing.`,
+        code: fileText
       });
     }
   };

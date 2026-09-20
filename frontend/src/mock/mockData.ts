@@ -34,6 +34,29 @@ if __name__ == '__main__':
 `
   },
   {
+    id: 'sample-xss',
+    name: 'ChatService - Stored XSS Vulnerability',
+    category: 'Cross-Site Scripting (CWE-79)',
+    description: 'Unescaped user input rendered directly into DOM allows arbitrary script execution in client context.',
+    code: `function renderMessage(userMessage) {
+    // VULNERABLE: Direct innerHTML assignment allows script injection
+    const container = document.getElementById('chat-messages');
+    container.innerHTML += '<div class="message">' + userMessage + '</div>';
+}
+
+function processIncomingPayload(payload) {
+    // Malicious payload payload: <img src=x onerror=alert(document.cookie)>
+    renderMessage(payload.body);
+}
+`,
+    testCode: `function testXssNeutralized() {
+    renderMessage('<script>alert("hacked")</script>');
+    const messages = document.getElementById('chat-messages');
+    assert(!messages.innerHTML.includes('<script>'));
+}
+`
+  },
+  {
     id: 'sample-logic-bug',
     name: 'RateLimiter - Off-by-One Token Exhaustion',
     category: 'Logic & State Mutation Bug (CWE-193)',
@@ -112,7 +135,7 @@ def verify_and_forward_webhook(payload: bytes, signature: str, callback_url: str
 export const MOCK_SCANS_RECORD: Record<string, ScanResult> = {
   'scan-sample-1': {
     scan_id: 'scan-sample-1',
-    project_name: 'AuthService - SQL Injection Vulnerability',
+    project_name: 'student-portal.zip',
     status: 'COMPLETED',
     created_at: new Date(Date.now() - 45000).toISOString(),
     completed_at: new Date().toISOString(),
@@ -135,14 +158,14 @@ export const MOCK_SCANS_RECORD: Record<string, ScanResult> = {
         id: 'iss-002',
         category: 'CODE_QUALITY',
         severity: 'MEDIUM',
-        title: 'Plaintext Password Comparison',
-        description: 'Passwords appear to be stored or compared in plaintext without cryptographic hashing (e.g., Argon2id or bcrypt).',
+        title: 'Unclosed Database Connection Pattern',
+        description: 'Database connection is manually closed without a context manager (with-statement), creating a resource leak on unexpected exceptions.',
         file_path: 'auth/service.py',
-        line_start: 7,
-        line_end: 7,
-        cwe_id: 'CWE-256',
-        code_snippet: 'WHERE username = ... AND password = ...',
-        recommendation: 'Implement secure password hashing using bcrypt or passlib.'
+        line_start: 4,
+        line_end: 9,
+        cwe_id: 'CWE-404',
+        code_snippet: 'conn = sqlite3.connect("users.db") ... conn.close()',
+        recommendation: 'Use "with sqlite3.connect(...) as conn:" context manager for guaranteed resource cleanup.'
       }
     ],
     repairs: [
@@ -160,20 +183,23 @@ export const MOCK_SCANS_RECORD: Record<string, ScanResult> = {
     conn.close()
     return user`,
         repaired_code: `def authenticate_user(username, password):
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    # REPAIRED: Parameterized query prevents SQL injection attacks
-    query = "SELECT id, username, role FROM users WHERE username = ? AND password = ?"
-    cursor.execute(query, (username, password))
-    user = cursor.fetchone()
-    conn.close()
-    return user`,
-        diff: `@@ -5,4 +5,4 @@
+    with sqlite3.connect('users.db') as conn:
+        cursor = conn.cursor()
+        # REPAIRED: Parameterized query prevents SQL injection attacks
+        query = "SELECT id, username, role FROM users WHERE username = ? AND password = ?"
+        cursor.execute(query, (username, password))
+        return cursor.fetchone()`,
+        diff: `@@ -4,6 +4,6 @@
 -    query = f"SELECT id, username, role FROM users WHERE username = '{username}' AND password = '{password}'"
 -    cursor.execute(query)
-+    query = "SELECT id, username, role FROM users WHERE username = ? AND password = ?"
-+    cursor.execute(query, (username, password))`,
-        explanation: 'Replaced insecure f-string SQL query concatenation with parameterized DB-API placeholders `(username, password)` to neutralize SQL injection vectors.',
+-    user = cursor.fetchone()
+-    conn.close()
++    with sqlite3.connect('users.db') as conn:
++        cursor = conn.cursor()
++        query = "SELECT id, username, role FROM users WHERE username = ? AND password = ?"
++        cursor.execute(query, (username, password))
++        return cursor.fetchone()`,
+        explanation: 'Replaced insecure f-string SQL query concatenation with parameterized DB-API placeholders `(username, password)` and wrapped in context manager.',
         model_used: 'anthropic.claude-3-5-sonnet-20241022-v2:0'
       }
     ],
@@ -207,25 +233,26 @@ export const MOCK_SCANS_RECORD: Record<string, ScanResult> = {
 [TEST RUNNER] Running test_secure_auth()...
 [PASS] Normal login with valid credentials -> User(id=1, username='regular_user')
 [PASS] Malicious injection payload -> None (Access Denied)
-[PASS] All 6 unit and security regression assertions passed.
+[PASS] All 14 unit and security regression assertions passed.
 [SANDBOX COMPLETED] Zero security breaches detected in isolated execution.`,
       stderr: '',
       duration_ms: 980,
       memory_used_mb: 41.2,
-      tests_passed: 6,
+      tests_passed: 14,
       tests_failed: 0,
       sandbox_provider: 'BEDROCK_AGENTCORE'
     },
     verdict: {
       is_verified: true,
       verdict: 'VERIFIED',
-      confidence_score: 98.5,
-      summary: 'The AI-generated repair successfully remediates CWE-89 SQL Injection without introducing functional regressions. All sandbox test assertions passed in isolated AWS execution.',
+      confidence_score: 99.4,
+      summary: 'Vulnerability neutralized. Zero regressions detected. Parameterized query certified.',
       reasoning: [
-        'Parameterized query syntax correctly adopted DB-API compliant tuple binding.',
-        'Exploit payload was executed in the sandbox and returned None, verifying the vulnerability is completely neutralized.',
-        'Legitimate user authentication test passed with matching record structure.',
-        'No performance degradation or additional memory footprint detected in Bedrock AgentCore execution.'
+        'Analyzed AST: Raw string interpolation in SQLite query identified on line 7.',
+        'Security scan confirmed CWE-89 SQL Injection exploitability.',
+        'Neural Repair Agent synthesized parameterized query patch with bound tuple parameters.',
+        'AgentCore MicroVM Sandbox executed test suite: 14/14 test assertions passed (0 regressions).',
+        'Authentication bypass payload admin\' OR \'1\'=\'1 correctly neutralized.'
       ],
       regression_detected: false,
       security_mitigated: true,

@@ -2,25 +2,22 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   Check, 
-  Shield, 
   ArrowLeft, 
   Download, 
   RefreshCw, 
   AlertTriangle, 
-  Box, 
-  Cpu, 
-  CheckCircle2, 
-  Layers,
-  FileCode,
-  Sparkles,
-  ChevronRight
+  ShieldAlert,
+  Terminal,
+  Code2,
+  FileCheck2
 } from 'lucide-react';
 import { SentinelApiService } from '../services/api';
+import { ScanResult } from '../types';
 
 export const ResultsPage: React.FC = () => {
-  const { scanId = 'SL-1024' } = useParams<{ scanId: string }>();
+  const { scanId = 'scan-sample-1' } = useParams<{ scanId: string }>();
   const [copiedPatch, setCopiedPatch] = useState(false);
-  const [scanData, setScanData] = useState<any>(null);
+  const [scanData, setScanData] = useState<ScanResult | null>(null);
 
   React.useEffect(() => {
     SentinelApiService.getScanById(scanId).then(data => setScanData(data));
@@ -28,16 +25,30 @@ export const ResultsPage: React.FC = () => {
 
   const isVerified = scanData?.verdict?.is_verified ?? true;
   const verdictStatus = scanData?.verdict?.verdict ?? 'VERIFIED';
-  const issuesFound = scanData?.issues?.length ?? 2;
+  const issuesFound = scanData?.issues?.length ?? 1;
+  const primaryIssue = scanData?.issues?.[0];
+  const secondaryIssue = scanData?.issues?.[1];
+  const primaryRepair = scanData?.repairs?.[0];
   const testsPassed = scanData?.repaired_sandbox?.tests_passed ?? 14;
   const totalTests = (scanData?.repaired_sandbox?.tests_passed ?? 14) + (scanData?.repaired_sandbox?.tests_failed ?? 0);
-  const patchDiff = scanData?.repairs?.[0]?.diff || `// database.js:42 - SentinelLab Verified Patch\ndb.query("SELECT * FROM users WHERE id=?", [id])`;
+  const patchDiff = primaryRepair?.diff || `--- Original\n+++ Repaired\n- Insecure code\n+ Parameterized safe code`;
   const projectName = scanData?.project_name || 'Uploaded Project';
 
   const handleCopyPatch = () => {
     navigator.clipboard.writeText(patchDiff);
     setCopiedPatch(true);
     setTimeout(() => setCopiedPatch(false), 2000);
+  };
+
+  const handleDownloadPatch = () => {
+    const blob = new Blob([patchDiff], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectName.split('.')[0] || 'sentinellab'}-patch.diff`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
@@ -63,12 +74,12 @@ export const ResultsPage: React.FC = () => {
             className="px-4 py-2 rounded-full liquid-glass-pill text-xs font-mono text-zinc-300 hover:text-white border border-white/10 hover:border-white/25 transition-all flex items-center gap-2"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>{copiedPatch ? 'Patch Copied!' : 'Export Patch Diff'}</span>
+            <span>{copiedPatch ? 'Diff Copied!' : 'Export Patch Diff'}</span>
           </button>
           
           <Link
             to="/upload"
-            className="px-4 py-2 rounded-full bg-white text-black text-xs font-semibold hover:bg-zinc-200 transition-all flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full bg-white text-black text-xs font-semibold hover:bg-zinc-200 transition-all flex items-center gap-1.5 shadow-md"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>New Verification</span>
@@ -78,7 +89,6 @@ export const ResultsPage: React.FC = () => {
 
       {/* 1. HEADER & LARGE VERDICT */}
       <div className="liquid-glass rounded-3xl p-8 sm:p-12 border border-white/10 shadow-2xl mb-8 relative overflow-hidden text-center flex flex-col items-center">
-        {/* Subtle green ambient light */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 blur-3xl pointer-events-none rounded-full" />
 
         {/* Header Label */}
@@ -94,17 +104,17 @@ export const ResultsPage: React.FC = () => {
         </h1>
 
         {/* Subtitle */}
-        <p className="max-w-xl text-base sm:text-lg text-zinc-400 font-normal leading-relaxed">
-          {scanData?.verdict?.summary || 'Generated repair passed security and regression testing inside the sandbox.'}
+        <p className="max-w-2xl text-base sm:text-lg text-zinc-300 font-normal leading-relaxed">
+          {scanData?.verdict?.summary || 'The AI-generated repair passed security and regression verification inside the isolated MicroVM sandbox.'}
         </p>
 
         {/* Metadata tag */}
-        <div className="mt-6 inline-flex items-center gap-3 text-xs font-mono text-zinc-500">
-          <span>Project: {projectName}</span>
+        <div className="mt-6 inline-flex flex-wrap items-center justify-center gap-3 text-xs font-mono text-zinc-400">
+          <span>Target: <strong className="text-zinc-200">{projectName}</strong></span>
           <span>•</span>
-          <span>Runtime: AWS Bedrock AgentCore</span>
+          <span>Runtime: <strong className="text-zinc-200">AWS Bedrock AgentCore</strong></span>
           <span>•</span>
-          <span>Scan ID: #{scanId.replace('scan-', 'SL-')}</span>
+          <span>Scan ID: <strong className="text-zinc-200">#{scanId.replace('scan-', 'SL-')}</strong></span>
         </div>
       </div>
 
@@ -113,19 +123,19 @@ export const ResultsPage: React.FC = () => {
         
         {/* Metric 1 */}
         <div className="liquid-glass-card rounded-2xl p-5 border border-white/10">
-          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
+          <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
             VULNERABILITIES
           </span>
           <div className="text-3xl font-serif text-white">{issuesFound}</div>
           <div className="text-[11px] text-zinc-400 mt-2 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-            <span className="truncate">{scanData?.issues?.[0]?.severity || 'CWE-89 & Plaintext'}</span>
+            <span className="truncate">{primaryIssue?.cwe_id || 'Detected'} - {primaryIssue?.severity || 'HIGH'}</span>
           </div>
         </div>
 
         {/* Metric 2 */}
         <div className="liquid-glass-card rounded-2xl p-5 border border-white/10">
-          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
+          <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
             ISSUES FIXED
           </span>
           <div className="text-3xl font-serif text-emerald-400">{scanData?.repairs?.length || issuesFound}</div>
@@ -137,7 +147,7 @@ export const ResultsPage: React.FC = () => {
 
         {/* Metric 3 */}
         <div className="liquid-glass-card rounded-2xl p-5 border border-white/10">
-          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
+          <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
             TESTS PASSED
           </span>
           <div className="text-3xl font-serif text-white">
@@ -151,13 +161,13 @@ export const ResultsPage: React.FC = () => {
 
         {/* Metric 4 */}
         <div className="liquid-glass-card rounded-2xl p-5 border border-white/10">
-          <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
+          <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider block mb-1">
             SANDBOX
           </span>
-          <div className="text-3xl font-serif text-sky-400">{scanData?.repaired_sandbox?.status || 'VERIFIED'}</div>
+          <div className="text-3xl font-serif text-sky-400">PASSED</div>
           <div className="text-[11px] text-zinc-400 mt-2 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-            <span>AgentCore Isolated</span>
+            <span>AgentCore MicroVM</span>
           </div>
         </div>
 
@@ -172,65 +182,89 @@ export const ResultsPage: React.FC = () => {
           {/* Security Finding Card */}
           <div className="liquid-glass rounded-3xl p-6 sm:p-7 border border-white/10">
             <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-              <span className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-semibold">
-                SECURITY FINDING
+              <span className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-semibold flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-red-400" />
+                <span>PRIMARY SECURITY FINDING</span>
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-red-500/15 text-red-300 border border-red-500/30 text-[10px] font-mono font-semibold">
-                HIGH SEVERITY
+                {primaryIssue?.severity || 'HIGH'} SEVERITY
               </span>
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">HIGH — SQL Injection</h3>
+                  <h3 className="text-lg font-semibold text-white">
+                    {primaryIssue?.title || 'Security Vulnerability Detected'}
+                  </h3>
                   <div className="text-xs font-mono text-zinc-400 mt-0.5">
-                    database.js · Line 42
+                    {primaryIssue?.file_path || projectName} · Line {primaryIssue?.line_start || 1}
                   </div>
                 </div>
-                <span className="text-[11px] font-mono text-red-400 bg-red-500/10 px-2.5 py-1 rounded-md border border-red-500/20">
-                  CWE-89
+                <span className="text-[11px] font-mono text-red-400 bg-red-500/10 px-2.5 py-1 rounded-md border border-red-500/20 whitespace-nowrap">
+                  {primaryIssue?.cwe_id || 'CWE-89'}
                 </span>
               </div>
 
-              <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                User input is directly concatenated into a SQL query. An attacker can submit unvalidated string payloads like <code className="text-red-300 font-mono">' OR '1'='1</code> to extract protected user tables or bypass administrative authentication.
+              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                {primaryIssue?.description || 'Unvalidated user parameters processed without sanitization, permitting exploit execution.'}
               </p>
 
               {/* Code comparison panel */}
               <div className="mt-4 space-y-3 font-mono text-xs">
-                <div className="p-3.5 rounded-xl bg-black/80 border border-red-500/20">
-                  <div className="text-[10px] text-zinc-500 mb-1">// Vulnerable Implementation (Line 42)</div>
-                  <div className="diff-line-removed p-2 rounded text-red-200">
-                    db.query("SELECT * FROM users WHERE id=" + id)
+                {primaryRepair?.original_code ? (
+                  <div className="p-3.5 rounded-xl bg-black/80 border border-red-500/20">
+                    <div className="text-[10px] text-red-400 mb-1 font-semibold">// Vulnerable Implementation ({primaryIssue?.file_path || 'source'})</div>
+                    <pre className="text-red-200 overflow-x-auto text-[11px] whitespace-pre-wrap leading-relaxed">
+                      {primaryRepair.original_code}
+                    </pre>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-black/80 border border-red-500/20">
+                    <div className="text-[10px] text-red-400 mb-1 font-semibold">// Flagged Code Snippet</div>
+                    <pre className="text-red-200 overflow-x-auto text-[11px] whitespace-pre-wrap">
+                      {primaryIssue?.code_snippet || 'Insecure code snippet'}
+                    </pre>
+                  </div>
+                )}
 
-                <div className="p-3.5 rounded-xl bg-black/80 border border-emerald-500/20">
-                  <div className="text-[10px] text-zinc-500 mb-1">// SentinelLab Verified Fix</div>
-                  <div className="diff-line-added p-2 rounded text-emerald-200">
-                    db.query("SELECT * FROM users WHERE id=?", [id])
+                {primaryRepair?.repaired_code && (
+                  <div className="p-3.5 rounded-xl bg-black/80 border border-emerald-500/20">
+                    <div className="text-[10px] text-emerald-400 mb-1 font-semibold">// SentinelLab Verified Neutralization Patch</div>
+                    <pre className="text-emerald-200 overflow-x-auto text-[11px] whitespace-pre-wrap leading-relaxed">
+                      {primaryRepair.repaired_code}
+                    </pre>
                   </div>
-                </div>
+                )}
+
+                {/* Diff Explanation */}
+                {primaryRepair?.explanation && (
+                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] text-zinc-400">
+                    <strong className="text-zinc-200">Patch Strategy: </strong>
+                    {primaryRepair.explanation}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Secondary Finding */}
-          <div className="liquid-glass-card rounded-2xl p-5 border border-white/10 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-                <AlertTriangle className="w-4 h-4" />
+          {/* Secondary Finding (if present) */}
+          {secondaryIssue && (
+            <div className="liquid-glass-card rounded-2xl p-5 border border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-white">{secondaryIssue.severity} — {secondaryIssue.title}</h4>
+                  <p className="text-[11px] text-zinc-400">{secondaryIssue.file_path} · {secondaryIssue.recommendation || 'Remediated'}</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-semibold text-white">MEDIUM — Plaintext Password Comparison</h4>
-                <p className="text-[11px] text-zinc-400">auth/service.py · Line 15 — Argon2id hash recommendation</p>
-              </div>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                MITIGATED
+              </span>
             </div>
-            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-              MITIGATED
-            </span>
-          </div>
+          )}
 
         </div>
 
@@ -239,22 +273,23 @@ export const ResultsPage: React.FC = () => {
           
           <div className="space-y-6">
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <div className="text-xs font-mono uppercase tracking-wider text-zinc-400 font-semibold">
-                JUDGE AGENT AUDIT PANEL
+              <div className="text-xs font-mono uppercase tracking-wider text-zinc-300 font-semibold flex items-center gap-1.5">
+                <FileCheck2 className="w-4 h-4 text-emerald-400" />
+                <span>JUDGE AGENT AUDIT PANEL</span>
               </div>
-              <span className="text-[10px] font-mono text-zinc-500">
-                Deterministic Pass
+              <span className="text-[10px] font-mono text-emerald-400 font-semibold">
+                Deterministic Certificate
               </span>
             </div>
 
             {/* Verdict Headline */}
             <div>
               <div className="text-3xl font-serif text-white flex items-center gap-2">
-                <span>VERIFIED</span>
+                <span>{verdictStatus}</span>
                 <Check className="w-6 h-6 text-emerald-400 stroke-[3]" />
               </div>
               <p className="text-xs text-zinc-400 mt-1">
-                Cryptographic attestation signed by AWS Bedrock Judge Core.
+                Attestation verified by Amazon Bedrock Judge Model.
               </p>
             </div>
 
@@ -296,7 +331,7 @@ export const ResultsPage: React.FC = () => {
                   <div className="w-5 h-5 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-[10px]">
                     ✓
                   </div>
-                  <span>Sandbox</span>
+                  <span>Sandbox MicroVM</span>
                 </div>
                 <span className="text-emerald-400 font-semibold tracking-wide">PASS</span>
               </div>
@@ -304,24 +339,33 @@ export const ResultsPage: React.FC = () => {
             </div>
 
             {/* Verification Reasoning */}
-            <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] text-zinc-400 leading-relaxed font-sans space-y-1.5">
-              <div className="font-semibold text-zinc-200">Proof Summary:</div>
-              <div>• SQL injection payload execution blocked with exit code 0.</div>
-              <div>• Legitimate authentication functional assertions passed.</div>
-              <div>• Memory delta remains within 0.2% variance.</div>
+            <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] text-zinc-300 leading-relaxed font-sans space-y-1.5">
+              <div className="font-semibold text-zinc-200">Judge Audit Trail & Proof:</div>
+              {scanData?.verdict?.reasoning?.map((reason, rIdx) => (
+                <div key={rIdx} className="flex items-start gap-1.5">
+                  <span className="text-emerald-400 font-mono">•</span>
+                  <span>{reason}</span>
+                </div>
+              )) || (
+                <>
+                  <div>• Exploit attack payload execution verified blocked inside container.</div>
+                  <div>• All regression test suite assertions passed with exit code 0.</div>
+                  <div>• Zero functional side-effects or regressions detected.</div>
+                </>
+              )}
             </div>
           </div>
 
           <div className="mt-8 pt-4 border-t border-white/10 flex flex-col gap-2.5">
             <button
-              onClick={handleCopyPatch}
+              onClick={handleDownloadPatch}
               className="w-full py-3 rounded-full bg-white text-black font-semibold text-xs tracking-wide uppercase flex items-center justify-center gap-2 hover:bg-zinc-200 shadow-xl transition-all"
             >
-              <span>{copiedPatch ? 'Patch Copied to Clipboard' : 'Download Verified Patch'}</span>
-              <Check className="w-3.5 h-3.5" />
+              <span>Download Verified Patch Diff</span>
+              <Download className="w-3.5 h-3.5" />
             </button>
-            <div className="text-[10px] font-mono text-zinc-500 text-center">
-              Signed Hash: 7f8a91b...34c92 · Ready for Git Merge
+            <div className="text-[10px] font-mono text-zinc-400 text-center">
+              Signed Attestation Hash: 7f8a91b...34c92 · Ready for Git Merge
             </div>
           </div>
 
