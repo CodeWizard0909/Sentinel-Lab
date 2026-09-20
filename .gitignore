@@ -1,3 +1,8 @@
+# Environment & Secrets (CRITICAL — never commit credentials)
+.env
+.env.*
+!.env.example
+
 # Python
 __pycache__/
 *.py[cod]
@@ -13,9 +18,7 @@ build/
 
 # Node
 node_modules/
-dist/
 .cache/
-
 
 # IDE
 .vscode/
